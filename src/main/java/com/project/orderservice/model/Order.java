@@ -19,6 +19,7 @@ public class Order {
     private Long id;
     private String productId;
     private Integer quantity;
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private OrderStatus status;
     private LocalDateTime createdAt;
 }

@@ -2,6 +2,7 @@ package com.project.orderservice.function;
 
 import com.project.orderservice.dto.StockRejectedEvent;
 import com.project.orderservice.dto.StockReservedEvent;
+import com.project.orderservice.model.OrderStatus;
 import com.project.orderservice.model.ProcessedEvent;
 import com.project.orderservice.repository.OrderRepository;
 import com.project.orderservice.repository.ProcessedEventRepository;
@@ -28,11 +29,11 @@ public class OrderResponseConsumer {
     @Bean
     public Consumer<StockReservedEvent> handleStockReservedEvent() {
         return event -> {
-            String eventId = "Reserved-" + event.orderId();
+            String eventId = OrderStatus.CONFIRMED.name() + "-" + event.orderId();
 
             if (!isDuplicatedEvent(eventId)) {
                 orderRepository.findById(event.orderId()).ifPresent(order -> {
-                    order.setStatus("Confirmed");
+                    order.setStatus(OrderStatus.CONFIRMED);
                     orderRepository.save(order);
 
                     log.info("Order {} confirmed", event.orderId());
@@ -44,10 +45,10 @@ public class OrderResponseConsumer {
     @Bean
     public Consumer<StockRejectedEvent> handleStockRejectedEvent() {
         return event -> {
-            String eventId = "REJECTED-" + event.orderId();
+            String eventId = OrderStatus.REJECTED.name() + "-" + event.orderId();
             if (!isDuplicatedEvent(eventId)) {
                 orderRepository.findById(event.orderId()).ifPresent(order -> {
-                    order.setStatus("REJECTED");
+                    order.setStatus(OrderStatus.REJECTED);
                     orderRepository.save(order);
                     log.info("😢 Order {} Rejected: {}", order.getId(), event.reason());
                 });

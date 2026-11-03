@@ -3,9 +3,12 @@ package com.project.orderservice.service;
 import com.project.orderservice.dto.OrderCreatedEvent;
 import com.project.orderservice.dto.OrderRequest;
 import com.project.orderservice.model.Order;
+import com.project.orderservice.model.OrderStatus;
 import com.project.orderservice.repository.OrderRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +31,7 @@ public class OrderService {
         Order order = new Order();
         order.setProductId(request.productId());
         order.setQuantity(request.quantity());
-        order.setStatus("Created");
+        order.setStatus(OrderStatus.CREATED);
         order.setCreatedAt(LocalDateTime.now());
 
         Order savedOrder = orderRepository.save(order);
@@ -43,5 +46,24 @@ public class OrderService {
         log.info("Order {} created and event sent to Kafka", savedOrder.getId());
 
         return savedOrder;
+    }
+
+    public Order getOrderById(Long id) {
+        return orderRepository.findById(id).orElseThrow(
+                () -> new RuntimeException("Order not found with id " + id));
+    }
+
+    public Page<Order> getAllOrders(String status, Pageable pageable) {
+        if (status != null && !status.isBlank()) {
+            try {
+                OrderStatus orderStatus = OrderStatus.valueOf(status.toUpperCase());
+
+                return orderRepository.findByStatus(orderStatus, pageable);
+            } catch (IllegalArgumentException e) {
+                throw new RuntimeException("Invalid status provided: " + status);
+            }
+        }
+
+        return orderRepository.findAll(pageable);
     }
 }
