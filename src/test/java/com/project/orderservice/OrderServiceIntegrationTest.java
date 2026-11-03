@@ -2,6 +2,7 @@ package com.project.orderservice;
 
 import com.project.orderservice.dto.OrderRequest;
 import com.project.orderservice.model.Order;
+import com.project.orderservice.model.OrderStatus;
 import com.project.orderservice.repository.OrderRepository;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -105,14 +106,16 @@ class OrderServiceIntegrationTest {
             Order response = objectMapper.readValue(jsonResponse, Order.class);
 
             Assertions.assertNotNull(response.getId());
-            Assertions.assertEquals("Created", response.getStatus());
-            Assertions.assertTrue(orderRepository.findById(response.getId()).isPresent(), "Order should be in DB");
+            Assertions.assertEquals(OrderStatus.CREATED, response.getStatus());
+            Assertions.assertTrue(orderRepository.findById(
+                    response.getId()).isPresent(), "Order should be in DB");
 
             Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
                 var records = consumer.poll(Duration.ofMillis(500));
                 Assertions.assertFalse(records.isEmpty(), "No messages received in Kafka");
                 ConsumerRecord<String, String> record = records.iterator().next();
-                Assertions.assertTrue(record.value().contains("LAPTOP-001"), "Message should contain product ID");
+                Assertions.assertTrue(record.value()
+                        .contains("LAPTOP-001"), "Message should contain product ID");
             });
         }
     }
