@@ -1,3 +1,4 @@
+# Force re-evaluation - v2
 version: 2
 updates:
   - package-ecosystem: "maven"
