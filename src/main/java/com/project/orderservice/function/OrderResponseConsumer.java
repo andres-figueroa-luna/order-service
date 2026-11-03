@@ -2,6 +2,7 @@ package com.project.orderservice.function;
 
 import com.project.orderservice.dto.StockRejectedEvent;
 import com.project.orderservice.dto.StockReservedEvent;
+import com.project.orderservice.dto.StockRestoredEvent;
 import com.project.orderservice.model.OrderStatus;
 import com.project.orderservice.model.ProcessedEvent;
 import com.project.orderservice.repository.OrderRepository;
@@ -52,6 +53,24 @@ public class OrderResponseConsumer {
                     orderRepository.save(order);
                     log.info("😢 Order {} Rejected: {}", order.getId(), event.reason());
                 });
+                processedEventRepository.save(new ProcessedEvent(eventId, LocalDateTime.now()));
+            }
+        };
+    }
+
+    @Bean
+    public Consumer<StockRestoredEvent> handleStockRestoredEvent() {
+        return event -> {
+            String eventId = OrderStatus.CANCELLED.name() + "-" + event.orderId();
+
+            if (!isDuplicatedEvent(eventId)) {
+                orderRepository.findById(event.orderId()).ifPresent(order -> {
+                    order.setStatus(OrderStatus.CANCELLED);
+
+                    orderRepository.save(order);
+                    log.info("Order {} fully CANCELLED (Stock restored)", order.getId());
+                });
+
                 processedEventRepository.save(new ProcessedEvent(eventId, LocalDateTime.now()));
             }
         };

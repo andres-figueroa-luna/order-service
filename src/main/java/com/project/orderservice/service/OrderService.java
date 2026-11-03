@@ -1,5 +1,6 @@
 package com.project.orderservice.service;
 
+import com.project.orderservice.dto.OrderCancelledEvent;
 import com.project.orderservice.dto.OrderCreatedEvent;
 import com.project.orderservice.dto.OrderRequest;
 import com.project.orderservice.model.Order;
@@ -43,7 +44,7 @@ public class OrderService {
         );
 
         streamBridge.send("orderCreated-out-0", event);
-        log.info("Order {} created and event sent to Kafka", savedOrder.getId());
+        log.info("Order {} created, event sent to Kafka", savedOrder.getId());
 
         return savedOrder;
     }
@@ -65,5 +66,23 @@ public class OrderService {
         }
 
         return orderRepository.findAll(pageable);
+    }
+
+    @Transactional
+    public void cancelOrder(Long id) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
+
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.REJECTED) {
+            throw new RuntimeException("Cannot cancel order with status " + order.getStatus());
+        }
+
+        order.setStatus(OrderStatus.CANCELLING);
+        orderRepository.save(order);
+
+        OrderCancelledEvent event = new OrderCancelledEvent(order.getId(), order.getProductId(), order.getQuantity());
+
+        streamBridge.send("orderCancelled-out-0", event);
+        log.info("Order {} is being cancelled, event sent to Kafka", order.getId());
     }
 }

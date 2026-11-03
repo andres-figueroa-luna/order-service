@@ -6,6 +6,7 @@ import com.project.orderservice.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,5 +34,11 @@ public class OrderController {
     @GetMapping
     public Page<Order> getOrders(@RequestParam(required = false) String status, Pageable pageable) {
         return orderService.getAllOrders(status, pageable);
+    }
+
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelOrder(@PathVariable Long id) {
+        orderService.cancelOrder(id);
+        return ResponseEntity.noContent().build();
     }
 }
