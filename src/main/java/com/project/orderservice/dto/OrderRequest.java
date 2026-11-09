@@ -5,8 +5,8 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public record OrderRequest(
-        @NotBlank(message = "Product Id is required")
-        String productId,
+        @NotBlank(message = "SKU is required")
+        String sku,
         @NotNull(message = "Quantity is required")
         @Min(value = 1, message = "Quantity must be at least 1")
         Integer quantity) {

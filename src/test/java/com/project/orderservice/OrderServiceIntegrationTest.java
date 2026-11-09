@@ -1,5 +1,6 @@
 package com.project.orderservice;
 
+import com.project.orderservice.dto.OrderCreatedResponse;
 import com.project.orderservice.dto.OrderRequest;
 import com.project.orderservice.model.Order;
 import com.project.orderservice.model.OrderStatus;
@@ -103,12 +104,12 @@ class OrderServiceIntegrationTest {
                     .andReturn();
 
             String jsonResponse = result.getResponse().getContentAsString();
-            Order response = objectMapper.readValue(jsonResponse, Order.class);
+            OrderCreatedResponse response = objectMapper.readValue(jsonResponse, OrderCreatedResponse.class);
 
-            Assertions.assertNotNull(response.getId());
-            Assertions.assertEquals(OrderStatus.CREATED, response.getStatus());
+            Assertions.assertNotNull(response.id());
+            Assertions.assertEquals("Order created successfully", response.message());
             Assertions.assertTrue(orderRepository.findById(
-                    response.getId()).isPresent(), "Order should be in DB");
+                    response.id()).isPresent(), "Order should be in DB");
 
             Awaitility.await().atMost(10, TimeUnit.SECONDS).untilAsserted(() -> {
                 var records = consumer.poll(Duration.ofMillis(500));

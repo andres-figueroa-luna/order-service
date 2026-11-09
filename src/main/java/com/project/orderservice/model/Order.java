@@ -17,7 +17,7 @@ public class Order {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private String productId;
+    private String sku;
     private Integer quantity;
     @Enumerated(EnumType.STRING)
     private OrderStatus status;
