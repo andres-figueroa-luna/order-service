@@ -100,7 +100,7 @@ class OrderServiceIntegrationTest {
             MvcResult result = mockMvc.perform(post("/api/orders")
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(jsonRequest))
-                    .andExpect(status().isOk())
+                    .andExpect(status().isCreated())
                     .andReturn();
 
             String jsonResponse = result.getResponse().getContentAsString();
