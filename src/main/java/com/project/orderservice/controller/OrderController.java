@@ -4,6 +4,8 @@ import com.project.orderservice.dto.*;
 import com.project.orderservice.model.Order;
 import com.project.orderservice.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -36,7 +38,8 @@ public class OrderController {
     @Operation(summary = "Get an order by Id", description = "Gets an order given his Id")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Order found"),
-            @ApiResponse(responseCode = "404", description = "Order not found")
+            @ApiResponse(responseCode = "404", description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getOrderById(@PathVariable Long id) {
@@ -56,8 +59,10 @@ public class OrderController {
             "to cancel an order and restore stock.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Cancellation initiated successfully"),
-            @ApiResponse(responseCode = "400", description = "Cannot cancel order in its current status"),
-            @ApiResponse(responseCode = "404", description = "Order not found")
+            @ApiResponse(responseCode = "400", description = "Cannot cancel order in its current status",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Product not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<OrderActionResponse> cancelOrder(@PathVariable Long id) {
