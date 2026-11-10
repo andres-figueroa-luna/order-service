@@ -5,7 +5,10 @@ import com.project.orderservice.exception.BusinessRuleException;
 import com.project.orderservice.exception.ResourceNotFoundException;
 import com.project.orderservice.model.Order;
 import com.project.orderservice.model.OrderStatus;
+import com.project.orderservice.publisher.KafkaEventPublisher;
 import com.project.orderservice.repository.OrderRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.data.domain.Page;
@@ -21,14 +24,14 @@ import java.util.List;
 public class OrderService {
 
     private final OrderRepository orderRepository;
-    private final StreamBridge streamBridge;
+    private final KafkaEventPublisher eventPublisher;
 
-    public OrderService(OrderRepository orderRepository, StreamBridge streamBridge) {
+    public OrderService(OrderRepository orderRepository, KafkaEventPublisher eventPublisher) {
         this.orderRepository = orderRepository;
-        this.streamBridge = streamBridge;
+        this.eventPublisher = eventPublisher;
     }
 
-    @Transactional
+
     public OrderCreatedResponse createOrder(OrderRequest request) {
         Order order = new Order();
         order.setSku(request.sku());
@@ -39,13 +42,20 @@ public class OrderService {
         Order savedOrder = orderRepository.save(order);
 
         OrderCreatedEvent event = new OrderCreatedEvent(
-          savedOrder.getId(),
-          savedOrder.getSku(),
-          savedOrder.getQuantity()
+                savedOrder.getId(),
+                savedOrder.getSku(),
+                savedOrder.getQuantity()
         );
 
-        streamBridge.send("orderCreated-out-0", event);
-        log.info("Order {} created, event sent to Kafka", savedOrder.getId());
+        try {
+            eventPublisher.publishEvent("orderCreated-out-0", event).join();
+            log.info("Order {} created, event sent to Kafka", savedOrder.getId());
+        } catch (BusinessRuleException e) {
+            log.error("Failed to send event. Rolling back order creation manually.");
+            orderRepository.delete(savedOrder);
+
+            throw e;
+        }
 
         return new OrderCreatedResponse(savedOrder.getId(), savedOrder.getSku(),
                 "Order created successfully");
@@ -95,7 +105,6 @@ public class OrderService {
                 page.isLast());
     }
 
-    @Transactional
     public OrderActionResponse cancelOrder(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id " + id));
@@ -104,13 +113,23 @@ public class OrderService {
             throw new BusinessRuleException("Cannot cancel order with status: " + order.getStatus());
         }
 
+        OrderStatus previousStatus = order.getStatus();
         order.setStatus(OrderStatus.CANCELLING);
-        orderRepository.save(order);
+
+        Order savedOrder = orderRepository.save(order);
 
         OrderCancelledEvent event = new OrderCancelledEvent(order.getId(), order.getSku(), order.getQuantity());
 
-        streamBridge.send("orderCancelled-out-0", event);
-        log.info("Order {} is being cancelled, event sent to Kafka", order.getId());
+        try {
+            eventPublisher.publishEvent("orderCancelled-out-0", event).join();
+            log.info("Order {} is being cancelled, event sent to Kafka", savedOrder.getId());
+        } catch (BusinessRuleException e) {
+            log.error("Failed to send cancel event. Rolling back status to {}", previousStatus);
+            savedOrder.setStatus(previousStatus);
+            orderRepository.save(savedOrder);
+
+            throw e;
+        }
 
         return new OrderActionResponse(
                 order.getId(),
