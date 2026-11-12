@@ -1,38 +1,59 @@
-# Order Service - Event-Driven Architecture 🚀
+# 📦 Order Service
 
 ![Java](https://img.shields.io/badge/Java-21-orange)
-![Spring Boot](https://img.shields.io/badge/Spring_Boot-4.1.2-green)
-![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.1.1-blue)
-![Kafka](https://img.shields.io/badge/Apache_Kafka-KRaft-black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-blue)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.8-green)
+![Spring Cloud](https://img.shields.io/badge/Spring_Cloud-2025.0.0-blue)
+![Kafka](https://img.shields.io/badge/Apache_Kafka-3.9.1-black)
 
-This project is a robust, production-ready microservice built with **Java 21 and Spring Boot 4**, designed to demonstrate a **Choreography-based SAGA pattern** for distributed transactions.
+> 📌 **Part of the [Event-Driven E-Commerce Architecture](https://github.com/andres-figueroa-luna/event-driven-microservices-portfolio).**
+> Clone the umbrella repository to run the complete ecosystem with Docker Compose, PostgreSQL, and Kafka.
 
-It acts as the first step in an e-commerce workflow: receiving HTTP requests, persisting orders in **PostgreSQL**, and publishing `OrderCreated` events to **Apache Kafka**. It also acts as a consumer, listening for `StockReserved` or `StockRejected` events to update the order status accordingly.
+## 🎯 Overview
+The **Order Service** is the entry point for the SAGA pattern. It exposes a REST API to manage orders, persists data in PostgreSQL, and publishes events to Kafka. It also acts as a consumer, listening for compensations (like stock rejections or restorations) to update the order status.
 
-## 🏗 Architecture & Flow
+## 🔌 API Endpoints
 
-The system uses an Event-Driven Architecture. Below is the sequence of a successful order:
+### Create Order
+`POST /api/orders`
+```json
+{
+    "sku": "LAPTOP-ROG-001",
+    "quantity": 2
+}
+```
+*(Publishes `OrderCreatedEvent`)*
 
-```mermaid
-sequenceDiagram
-    participant Client
-    participant OS as Order Service
-    participant DB as PostgreSQL
-    participant Kafka as Apache Kafka
-    participant IS as Inventory Service
-    
-    Client->>OS: POST /api/orders (JSON)
-    OS->>DB: Save Order (Status: CREATED)
-    OS->>Kafka: Publish OrderCreatedEvent (orders-topic)
-    Kafka->>IS: Consume OrderCreatedEvent
-    IS->>IS: Check & Update Stock
-    alt Stock Available
-        IS->>Kafka: Publish StockReservedEvent (stock-reserved-topic)
-        Kafka->>OS: Consume StockReservedEvent
-        OS->>DB: Update Order (Status: CONFIRMED)
-    else Out of Stock
-        IS->>Kafka: Publish StockRejectedEvent (stock-rejected-topic)
-        Kafka->>OS: Consume StockRejectedEvent
-        OS->>DB: Update Order (Status: REJECTED)
-    end
+### Get Order by ID
+`GET /api/orders/{id}`
+
+### List Orders (Paginated)
+`GET /api/orders?page=0&size=10&status=CONFIRMED`
+
+### Cancel Order
+`PATCH /api/orders/{id}/cancel`
+*(Initiates the compensation flow, publishing `OrderCancelledEvent`)*
+
+## 🏗️ Architecture & Tech Stack
+*   **Spring Boot 3.5.8 (LTS)** & **Java 21**
+*   **Spring Cloud Stream** (Kafka Binder)
+*   **Spring Data JPA** (PostgreSQL)
+*   **Resilience4j** (Circuit Breaker, Retry, TimeLimiter for Kafka publishing)
+*   **Swagger / OpenAPI** for REST documentation.
+
+## 🗄️ Database Schema
+Hibernate automatically manages the following tables (`ddl-auto=update`):
+*   `orders`: Stores order details and state (`CREATED`, `CONFIRMED`, `REJECTED`, `CANCELLING`, `CANCELLED`).
+*   `processed_events`: Used for Idempotency to prevent duplicate Kafka message processing.
+
+## 🚀 Running Locally
+You can run this service standalone for local development:
+```bash
+mvn spring-boot:run
+```
+*Note: Requires a local PostgreSQL instance on port `5433` and Kafka on port `9092`.*
+
+## 🧪 Testing
+The project uses **Testcontainers** to run integration tests against real PostgreSQL and Kafka instances.
+```bash
+mvn clean verify
+```
