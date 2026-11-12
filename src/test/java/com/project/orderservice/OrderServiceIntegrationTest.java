@@ -1,9 +1,8 @@
 package com.project.orderservice;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.project.orderservice.dto.OrderCreatedResponse;
 import com.project.orderservice.dto.OrderRequest;
-import com.project.orderservice.model.Order;
-import com.project.orderservice.model.OrderStatus;
 import com.project.orderservice.repository.OrderRepository;
 import org.apache.kafka.clients.admin.AdminClient;
 import org.apache.kafka.clients.admin.AdminClientConfig;
@@ -17,21 +16,20 @@ import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
-import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import org.testcontainers.containers.KafkaContainer;
+import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.kafka.KafkaContainer;
-import org.testcontainers.postgresql.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
-import tools.jackson.databind.ObjectMapper;
 
 import java.time.Duration;
 import java.util.*;
@@ -47,13 +45,13 @@ class OrderServiceIntegrationTest {
 
     @ServiceConnection
     @Container
-    static PostgreSQLContainer postgres = new PostgreSQLContainer(
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>(
             DockerImageName.parse("postgres:16-alpine")
     );
 
     @Container
     static KafkaContainer kafka = new KafkaContainer(
-            DockerImageName.parse("apache/kafka:latest"));
+            DockerImageName.parse("confluentinc/cp-kafka:7.6.0"));
 
     @DynamicPropertySource
     static void overrideProperties(DynamicPropertyRegistry registry) {
