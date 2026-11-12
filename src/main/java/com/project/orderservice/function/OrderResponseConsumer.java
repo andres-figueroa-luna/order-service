@@ -39,6 +39,8 @@ public class OrderResponseConsumer {
 
                     log.info("Order {} confirmed", event.orderId());
                 });
+
+                processedEventRepository.save(new ProcessedEvent(eventId, LocalDateTime.now()));
             }
         };
     }
@@ -53,6 +55,7 @@ public class OrderResponseConsumer {
                     orderRepository.save(order);
                     log.info("😢 Order {} Rejected: {}", order.getId(), event.reason());
                 });
+
                 processedEventRepository.save(new ProcessedEvent(eventId, LocalDateTime.now()));
             }
         };
