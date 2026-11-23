@@ -186,7 +186,7 @@
             <plugin>
                 <groupId>org.flywaydb</groupId>
                 <artifactId>flyway-maven-plugin</artifactId>
-                <version>11.7.2</version>
+                <version>13.13.0</version>
                 <configuration>
                     <url>${db.url}</url>
                     <user>${db.user}</user>
